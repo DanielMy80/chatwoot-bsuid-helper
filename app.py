@@ -94,6 +94,7 @@ def send_request_contact_info(to: str):
 def chatwoot_webhook():
     data = request.get_json(force=True, silent=True) or {}
     event = data.get("event")
+    print(f"[DEBUG] Webhook recibido - event: {event}, msg_type: {data.get('message_type')}, conv: {data.get('conversation', {}).get('id')}")
     
     if WEBHOOK_SECRET:
         token = request.args.get("secret") or request.headers.get("X-Chatwoot-Secret", "")
