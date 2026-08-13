@@ -96,7 +96,7 @@ def chatwoot_webhook():
     event = data.get("event")
     
     # DEBUG: Loggear todo lo que llega
-    print(f"[DEBUG] Webhook recibido - event: {event}, msg_type: {data.get('message_type')}, conv: {data.get('conversation', {}).get('id')}")   
+    # print(f"[DEBUG] Webhook recibido - event: {event}, msg_type: {data.get('message_type')}, conv: {data.get('conversation', {}).get('id')}")   
 
     if WEBHOOK_SECRET:
         token = request.args.get("secret") or request.headers.get("X-Chatwoot-Secret", "")
