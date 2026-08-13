@@ -90,14 +90,6 @@ def send_request_contact_info(to: str):
         print(f"[ERROR] send_request_contact_info: {e}")
         return {"error": str(e)}
 
-@app.route('/', methods=['GET'])
-def root():
-    return jsonify({"status": "ok", "service": "bsuid-helper"}), 200
-
-@app.route('/health', methods=['GET'])
-def health():
-    return jsonify({"status": "ok"}), 200
-
 @app.route('/webhook/chatwoot', methods=['POST'])
 def chatwoot_webhook():
     data = request.get_json(force=True, silent=True) or {}
@@ -206,6 +198,10 @@ def whatsapp_webhook():
                         conn.close()
 
     return jsonify({"status": "processed"}), 200
+
+@app.route('/health', methods=['GET'])
+def health():
+    return jsonify({"status": "ok"}), 200
 
 if __name__ == '__main__':
     init_db()
