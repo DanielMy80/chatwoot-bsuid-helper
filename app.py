@@ -7,7 +7,6 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# ─── Configuración vía variables de entorno ───
 CHATWOOT_URL       = os.getenv("CHATWOOT_URL", "").rstrip("/")
 CHATWOOT_API_TOKEN = os.getenv("CHATWOOT_API_TOKEN")
 WHATSAPP_API_VER   = os.getenv("WHATSAPP_API_VERSION", "v22.0")
@@ -17,7 +16,6 @@ CHATWOOT_WEBHOOK   = os.getenv("CHATWOOT_WEBHOOK_URL", "")
 WEBHOOK_SECRET     = os.getenv("WEBHOOK_SECRET", "")
 DB_PATH            = os.getenv("DB_PATH", "/app/data/bsuid.db")
 
-# ─── Utilidades ───
 def init_db():
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
@@ -92,14 +90,18 @@ def send_request_contact_info(to: str):
         print(f"[ERROR] send_request_contact_info: {e}")
         return {"error": str(e)}
 
-# ─── Endpoint 1: Webhook saliente de Chatwoot ───
+@app.route('/', methods=['GET'])
+def root():
+    return jsonify({"status": "ok", "service": "bsuid-helper"}), 200
+
+@app.route('/health', methods=['GET'])
+def health():
+    return jsonify({"status": "ok"}), 200
+
 @app.route('/webhook/chatwoot', methods=['POST'])
 def chatwoot_webhook():
     data = request.get_json(force=True, silent=True) or {}
     event = data.get("event")
-    
-    # DEBUG: Loggear todo lo que llega para verificar que el webhook funciona
-    print(f"[DEBUG] Webhook recibido - event: {event}, msg_type: {data.get('message_type')}, conv_id: {data.get('conversation', {}).get('id')}, account_id: {data.get('account', {}).get('id')}")
 
     if WEBHOOK_SECRET:
         token = request.args.get("secret") or request.headers.get("X-Chatwoot-Secret", "")
@@ -145,7 +147,6 @@ def chatwoot_webhook():
     print(f"[OK] Solicitud enviada a {source_id} (conv={conversation_id})")
     return jsonify({"status": "requested", "wa_response": result}), 200
 
-# ─── Endpoint 2: Webhook directo de WhatsApp (opcional) ───
 @app.route('/webhook/whatsapp', methods=['GET', 'POST'])
 def whatsapp_webhook():
     if request.method == 'GET':
@@ -205,14 +206,6 @@ def whatsapp_webhook():
                         conn.close()
 
     return jsonify({"status": "processed"}), 200
-
-@app.route('/health', methods=['GET'])
-def health():
-    return jsonify({"status": "ok"}), 200
-    
-@app.route('/', methods=['GET'])
-def root():
-    return jsonify({"status": "ok", "service": "bsuid-helper"}), 200
 
 if __name__ == '__main__':
     init_db()
