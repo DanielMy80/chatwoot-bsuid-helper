@@ -4,7 +4,6 @@ import sqlite3
 import requests
 from flask import Flask, request, jsonify
 from datetime import datetime
-from urllib.parse import urljoin
 
 app = Flask(__name__)
 
@@ -34,14 +33,18 @@ def has_whatsapp_username(sender_data) -> bool:
     if not sender_data:
         return False
     additional = sender_data.get("additional_attributes") or {}
-    # Verificar si tiene social_whatsapp_user_name
     if additional.get("social_whatsapp_user_name"):
         return True
-    # También verificar en social_profiles
     social = additional.get("social_profiles") or {}
     if social.get("whatsapp"):
         return True
     return False
+
+def message_contains_trigger(content: str) -> bool:
+    """Verifica si el mensaje contiene la palabra clave 'Chatwoot' (case-insensitive)."""
+    if not content:
+        return False
+    return "chatwoot" in content.lower()
 
 def send_request_contact_info(to: str):
     url = f"https://graph.facebook.com/{WHATSAPP_API_VER}/{WHATSAPP_PHONE_ID}/messages"
@@ -98,20 +101,30 @@ def chatwoot_webhook():
     account_id      = data.get("account", {}).get("id")
     conversation_id = data.get("conversation", {}).get("id")
     sender          = data.get("sender") or {}
+    content         = data.get("content") or ""
 
     print(f"[DEBUG] Account: {account_id}, Conversation: {conversation_id}")
+    print(f"[DEBUG] Content: '{content}'")
     print(f"[DEBUG] Sender data: {sender}")
 
     if not account_id or not conversation_id:
         return jsonify({"status": "ignored", "reason": "missing_ids"}), 200
 
-    # Detectar si el contacto tiene username de WhatsApp
+    # Paso 1: Verificar si el contacto tiene username de WhatsApp
     if not has_whatsapp_username(sender):
         print(f"[DEBUG] Ignorado: contacto no tiene username de WhatsApp")
         return jsonify({"status": "ignored", "reason": "no_whatsapp_username"}), 200
 
+    print(f"[DEBUG] Contacto tiene username de WhatsApp ✓")
+
+    # Paso 2: Verificar si el mensaje contiene la palabra clave "Chatwoot"
+    if not message_contains_trigger(content):
+        print(f"[DEBUG] Ignorado: mensaje no contiene la palabra clave 'Chatwoot'")
+        return jsonify({"status": "ignored", "reason": "no_trigger_word"}), 200
+
+    print(f"[DEBUG] Mensaje contiene palabra clave 'Chatwoot' ✓")
+
     # Obtener source_id (wa_id) para enviar el mensaje
-    # Chatwoot lo envía en conversation.contact_inbox.source_id
     conversation_data = data.get("conversation") or {}
     contact_inbox = conversation_data.get("contact_inbox") or {}
     source_id = contact_inbox.get("source_id")
@@ -120,7 +133,7 @@ def chatwoot_webhook():
         print(f"[DEBUG] Ignorado: no hay source_id")
         return jsonify({"status": "ignored", "reason": "no_source_id"}), 200
 
-    print(f"[DEBUG] source_id: {source_id}, tiene username: {has_whatsapp_username(sender)}")
+    print(f"[DEBUG] source_id: {source_id}")
 
     # Evitar spam: solo solicitar una vez por conversación
     conn = sqlite3.connect(DB_PATH)
