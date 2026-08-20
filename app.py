@@ -85,7 +85,7 @@ def chatwoot_webhook():
     print(f"[DEBUG] Webhook recibido - event: {event}")
 
     if WEBHOOK_SECRET:
-        token = request.args.get("secret") or request.headers.get("X-Chatwoot-Secret", "")
+        token = request.args.get("secret") or request.headers.get("X-Chatwoot-Secret", "") or data.get("secret", "")
         if token != WEBHOOK_SECRET:
             print(f"[DEBUG] Secret no coincide")
             return jsonify({"error": "Unauthorized"}), 401
